@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>X.com Auto Login - Cài đặt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #1DA1F2;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #1DA1F2;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #0c85d0;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .warning {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <h1>X.com Auto Login - Cài đặt</h1>
+  <div class="form-group">
+    <label for="username">Tên đăng nhập (email/username):</label>
+    <input type="text" id="username" placeholder="Nhập email hoặc username">
+  </div>
+  <div class="form-group">
+    <label for="password">Mật khẩu:</label>
+    <input type="password" id="password" placeholder="Nhập mật khẩu">
+  </div>
+  <button id="save">Lưu cài đặt</button>
+  <div id="status" class="status" style="display: none;"></div>
+  <div class="warning" style="margin-top: 20px;">
+    <p><strong>Lưu ý:</strong> Thông tin đăng nhập của bạn được lưu trữ cục bộ trong trình duyệt. Không nên sử dụng extension này trên máy tính công cộng.</p>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

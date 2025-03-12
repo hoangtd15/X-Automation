@@ -1,0 +1,51 @@
+{
+    "manifest_version": 3,
+    "name": "X.com Auto Login & Scroll",
+    "version": "1.0",
+    "description": "Tự động mở, đăng nhập và cuộn X.com, xử lý quảng cáo",
+    "permissions": [
+        "storage",
+        "tabs",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://x.com/*",
+                "https://twitter.com/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": "icon.png"
+    },
+    "options_page": "options.html",
+    "icons": {
+        "16": "icon.png",
+        "48": "icon.png",
+        "128": "icon.png"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "jquery.min.js"
+            ],
+            "matches": [
+                "https://x.com/*",
+                "https://twitter.com/*"
+            ]
+        }
+    ]
+}
