@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const autoScrollToggle = document.getElementById("autoScroll");
   const statusElement = document.getElementById("status");
 
+  console.log("Popup script đã được tải");
+
   // Kiểm tra thông tin đăng nhập đã được cấu hình chưa
   chrome.storage.sync.get(
     ["username", "password", "autoScroll"],
@@ -23,30 +25,81 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Xử lý khi nhấn nút mở X.com
   openButton.addEventListener("click", function () {
+    console.log("Đã nhấn nút mở X.com");
     chrome.runtime.sendMessage({ action: "openXcom" });
     window.close();
   });
 
   // Xử lý khi nhấn nút cài đặt
   optionsButton.addEventListener("click", function () {
+    console.log("Đã nhấn nút cài đặt");
     chrome.runtime.openOptionsPage();
     window.close();
   });
 
   // Xử lý khi thay đổi trạng thái toggle
   autoScrollToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ autoScroll: this.checked });
+    const isEnabled = this.checked;
+    console.log("Đã thay đổi trạng thái tự động cuộn:", isEnabled);
+
+    chrome.storage.sync.set({ autoScroll: isEnabled });
 
     // Gửi tin nhắn đến tất cả tab X.com đang mở
     chrome.tabs.query(
       { url: ["*://x.com/*", "*://twitter.com/*"] },
       function (tabs) {
+        console.log("Tìm thấy", tabs.length, "tab X.com");
         for (const tab of tabs) {
-          chrome.tabs.sendMessage(tab.id, {
-            action: this.checked ? "startScrolling" : "stopScrolling",
-          });
+          console.log("Gửi tin nhắn đến tab ID:", tab.id);
+          chrome.tabs.sendMessage(
+            tab.id,
+            { action: isEnabled ? "startScrolling" : "stopScrolling" },
+            function (response) {
+              if (chrome.runtime.lastError) {
+                console.log("Lỗi:", chrome.runtime.lastError.message);
+              } else if (response) {
+                console.log("Phản hồi:", response.status);
+              }
+            }
+          );
         }
-      }.bind(this)
+      }
     );
   });
+
+  // Thêm một nút kiểm tra để xem extension có hoạt động không
+  const testDiv = document.createElement("div");
+  testDiv.style.marginTop = "10px";
+
+  const testButton = document.createElement("button");
+  testButton.textContent = "Kiểm tra hoạt động";
+  testButton.addEventListener("click", function () {
+    chrome.tabs.query(
+      { url: ["*://x.com/*", "*://twitter.com/*"] },
+      function (tabs) {
+        if (tabs.length > 0) {
+          statusElement.textContent = "Đang kiểm tra...";
+          chrome.tabs.sendMessage(
+            tabs[0].id,
+            { action: "testConnection" },
+            function (response) {
+              if (chrome.runtime.lastError) {
+                statusElement.textContent =
+                  "Lỗi kết nối: " + chrome.runtime.lastError.message;
+              } else if (response) {
+                statusElement.textContent = "Kết nối OK: " + response.status;
+              } else {
+                statusElement.textContent = "Không nhận được phản hồi";
+              }
+            }
+          );
+        } else {
+          statusElement.textContent = "Không tìm thấy tab X.com nào đang mở";
+        }
+      }
+    );
+  });
+
+  testDiv.appendChild(testButton);
+  document.body.appendChild(testDiv);
 });
