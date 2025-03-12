@@ -4,29 +4,69 @@ let adTabId = null;
 let mainTabId = null;
 let lastScrollPosition = 0;
 let scrollInterval = null;
+let lastReloadTime = Date.now();
+const RELOAD_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+// Biến cho cài đặt tốc độ cuộn
+let scrollSpeed = 1;
+let scrollIntervalTime = 3000; // Thời gian giữa các lần cuộn (ms)
+let scrollDistance = 300; // Khoảng cách cuộn (px)
 
 // Khi trang tải xong
 window.addEventListener("load", function () {
   console.log("X.com Auto Scroll: Trang đã tải xong");
+  lastReloadTime = Date.now();
 
-  // Kiểm tra trạng thái đăng nhập
-  setTimeout(function () {
-    if (isLoggedIn()) {
-      console.log("Đã đăng nhập vào X.com");
-      // Lưu ID tab
-      saveTabId();
-      // Bắt đầu tự động cuộn sau 3 giây
-      setTimeout(startScrolling, 3000);
-    } else {
-      console.log("Chưa đăng nhập vào X.com");
-      tryLogin();
+  // Tải cài đặt tốc độ cuộn
+  chrome.storage.sync.get(["scrollSpeed"], function (data) {
+    if (data.scrollSpeed) {
+      scrollSpeed = parseInt(data.scrollSpeed);
+      updateScrollSettings();
     }
-  }, 2000);
+
+    // Kiểm tra trạng thái đăng nhập
+    setTimeout(function () {
+      if (isLoggedIn()) {
+        console.log("Đã đăng nhập vào X.com");
+        // Lưu ID tab
+        saveTabId();
+        // Bắt đầu tự động cuộn sau 3 giây
+        setTimeout(startScrolling, 3000);
+      } else {
+        console.log("Chưa đăng nhập vào X.com");
+        tryLogin();
+      }
+    }, 2000);
+  });
 });
 
-// Kiểm tra xem người dùng đã đăng nhập chưa
+// Hàm cập nhật cài đặt cuộn
+function updateScrollSettings() {
+  switch (scrollSpeed) {
+    case 1:
+      scrollIntervalTime = 3000;
+      break;
+    case 2:
+      scrollIntervalTime = 1500;
+      break;
+    case 3:
+      scrollIntervalTime = 750;
+      break;
+    default:
+      scrollIntervalTime = 3000;
+  }
+
+  console.log(
+    `Đã cập nhật tốc độ cuộn: cấp độ ${scrollSpeed}, thời gian: ${scrollIntervalTime}ms`
+  );
+
+  if (isScrolling && scrollInterval) {
+    clearInterval(scrollInterval);
+    scrollInterval = setInterval(performScroll, scrollIntervalTime);
+  }
+}
+
 function isLoggedIn() {
-  // Kiểm tra các phần tử chỉ xuất hiện khi đã đăng nhập
   return (
     document.querySelector('a[href="/home"]') !== null ||
     document.querySelector('a[aria-label="Profile"]') !== null ||
@@ -34,7 +74,6 @@ function isLoggedIn() {
   );
 }
 
-// Lưu ID tab hiện tại
 function saveTabId() {
   chrome.runtime.sendMessage({ action: "getTabId" }, function (response) {
     if (response && response.tabId) {
@@ -44,7 +83,6 @@ function saveTabId() {
   });
 }
 
-// Thử đăng nhập
 function tryLogin() {
   console.log("Đang thử đăng nhập...");
   chrome.storage.sync.get(["username", "password"], function (data) {
@@ -60,23 +98,19 @@ function tryLogin() {
   });
 }
 
-// Hàm đăng nhập
 function loginToXcom(username, password) {
   console.log("Bắt đầu quá trình đăng nhập...");
 
-  // Tìm trường username/email
   setTimeout(function () {
     const usernameField =
       document.querySelector('input[name="text"]') ||
       document.querySelector('input[autocomplete="username"]');
 
     if (usernameField) {
-      // Điền username
       usernameField.value = username;
       usernameField.dispatchEvent(new Event("input", { bubbles: true }));
       console.log("Đã điền username");
 
-      // Tìm và nhấn nút Next
       setTimeout(function () {
         const nextButton = Array.from(
           document.querySelectorAll('div[role="button"]')
@@ -90,21 +124,18 @@ function loginToXcom(username, password) {
           nextButton.click();
           console.log("Đã nhấn nút Next");
 
-          // Tìm trường password
           setTimeout(function () {
             const passwordField =
               document.querySelector('input[name="password"]') ||
               document.querySelector('input[type="password"]');
 
             if (passwordField) {
-              // Điền password
               passwordField.value = password;
               passwordField.dispatchEvent(
                 new Event("input", { bubbles: true })
               );
               console.log("Đã điền password");
 
-              // Tìm và nhấn nút đăng nhập
               setTimeout(function () {
                 const loginButton = Array.from(
                   document.querySelectorAll('div[role="button"]')
@@ -118,7 +149,6 @@ function loginToXcom(username, password) {
                   loginButton.click();
                   console.log("Đã nhấn nút đăng nhập");
 
-                  // Đợi đăng nhập thành công và bắt đầu cuộn
                   setTimeout(function () {
                     if (isLoggedIn()) {
                       console.log("Đăng nhập thành công");
@@ -146,36 +176,35 @@ function loginToXcom(username, password) {
   }, 2000);
 }
 
-// Bắt đầu tự động cuộn
+function performScroll() {
+  if (!isScrolling) return;
+
+  // Check if it's time to reload
+  if (Date.now() - lastReloadTime >= RELOAD_INTERVAL) {
+    console.log("5 minutes passed, reloading page...");
+    lastReloadTime = Date.now();
+    location.reload();
+    return;
+  }
+
+  lastScrollPosition = window.scrollY;
+  window.scrollBy(0, scrollDistance);
+  console.log("Đã cuộn xuống đến vị trí:", window.scrollY);
+
+  setTimeout(checkForAds, 1000);
+}
+
 function startScrolling() {
   if (isScrolling) {
     console.log("Đã đang cuộn, không khởi động lại");
     return;
   }
 
-  console.log("Bắt đầu tự động cuộn");
+  console.log(`Bắt đầu tự động cuộn với tốc độ cấp độ ${scrollSpeed}`);
   isScrolling = true;
-
-  // Hàm cuộn đơn giản
-  function performScroll() {
-    if (!isScrolling) return;
-
-    // Lưu vị trí cuộn hiện tại
-    lastScrollPosition = window.scrollY;
-
-    // Cuộn xuống
-    window.scrollBy(0, 300);
-    console.log("Đã cuộn xuống đến vị trí:", window.scrollY);
-
-    // Kiểm tra quảng cáo sau khi cuộn
-    setTimeout(checkForAds, 1000);
-  }
-
-  // Thiết lập interval để cuộn định kỳ
-  scrollInterval = setInterval(performScroll, 3000);
+  scrollInterval = setInterval(performScroll, scrollIntervalTime);
 }
 
-// Dừng tự động cuộn
 function stopScrolling() {
   console.log("Dừng tự động cuộn");
   isScrolling = false;
@@ -186,12 +215,12 @@ function stopScrolling() {
   }
 }
 
-// Kiểm tra quảng cáo
 function checkForAds() {
   console.log("Đang kiểm tra quảng cáo...");
 
-  // Tìm tất cả các tweet
-  const tweets = document.querySelectorAll('article[data-testid="tweet"]');
+  const tweets = document.querySelectorAll(
+    'article[data-testid="tweet"], div[data-testid="promoted-tweet"]'
+  );
 
   if (!tweets || tweets.length === 0) {
     console.log("Không tìm thấy tweet nào");
@@ -200,26 +229,26 @@ function checkForAds() {
 
   console.log(`Tìm thấy ${tweets.length} tweets, đang kiểm tra quảng cáo...`);
 
-  // Kiểm tra từng tweet xem có phải là quảng cáo không
   for (const tweet of tweets) {
     const tweetText = tweet.textContent || "";
 
-    // Kiểm tra xem tweet có chứa "Promoted" hoặc "Quảng cáo" không
     if (tweetText.includes("Promoted") || tweetText.includes("Quảng cáo")) {
       console.log("Đã tìm thấy quảng cáo!");
 
-      // Tìm link trong quảng cáo
-      const links = tweet.querySelectorAll('a[role="link"]');
+      const links = tweet.querySelectorAll(
+        'a[href*="/"]:not([href*="/home"]):not([href*="/notifications"])'
+      );
 
-      if (links && links.length > 0) {
-        const adLink = links[0].href;
-
-        if (adLink) {
+      for (const link of links) {
+        const adLink = link.href;
+        if (
+          adLink &&
+          !adLink.includes("twitter.com/home") &&
+          !adLink.includes("twitter.com/notifications")
+        ) {
           console.log("Tìm thấy link quảng cáo:", adLink);
-
-          // Xử lý quảng cáo
           handleAd(adLink);
-          return; // Chỉ xử lý một quảng cáo tại một thời điểm
+          return;
         }
       }
     }
@@ -228,19 +257,20 @@ function checkForAds() {
   console.log("Không tìm thấy quảng cáo trong lần kiểm tra này");
 }
 
-// Xử lý quảng cáo
 function handleAd(adLink) {
   stopScrolling();
   console.log("Dừng cuộn và mở quảng cáo:", adLink);
 
-  // Gửi yêu cầu mở quảng cáo trong tab mới
+  const formattedLink = adLink.startsWith("http")
+    ? adLink
+    : `https://twitter.com${adLink}`;
+
   chrome.runtime.sendMessage({
     action: "openAd",
-    url: adLink,
+    url: formattedLink,
     mainTabId: mainTabId,
   });
 
-  // Sau 5 giây, quay lại tab chính và tiếp tục cuộn
   setTimeout(function () {
     console.log("Đã đợi 5 giây, quay lại tab chính");
 
@@ -256,7 +286,6 @@ function handleAd(adLink) {
   }, 5000);
 }
 
-// Lắng nghe tin nhắn từ background và popup
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("Nhận tin nhắn:", message.action);
 
@@ -271,10 +300,15 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   } else if (message.action === "stopScrolling") {
     stopScrolling();
     sendResponse({ status: "ok" });
+  } else if (message.action === "setScrollSpeed") {
+    scrollSpeed = message.speed;
+    updateScrollSettings();
+    sendResponse({ status: "ok", newSpeed: scrollSpeed });
+  } else if (message.action === "testConnection") {
+    sendResponse({ status: "connected" });
   }
 
   return true;
 });
 
-// Thêm các log để debug
 console.log("X.com Auto Scroll: Content script đã được tải");

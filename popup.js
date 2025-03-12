@@ -3,12 +3,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const optionsButton = document.getElementById("goToOptions");
   const autoScrollToggle = document.getElementById("autoScroll");
   const statusElement = document.getElementById("status");
+  const speedOptions = document.getElementsByName("scrollSpeed");
 
   console.log("Popup script đã được tải");
 
   // Kiểm tra thông tin đăng nhập đã được cấu hình chưa
   chrome.storage.sync.get(
-    ["username", "password", "autoScroll"],
+    ["username", "password", "autoScroll", "scrollSpeed"],
     function (data) {
       if (data.username && data.password) {
         statusElement.textContent = "Đã cấu hình tài khoản: " + data.username;
@@ -19,6 +20,16 @@ document.addEventListener("DOMContentLoaded", function () {
       // Thiết lập trạng thái toggle tự động cuộn
       if (data.autoScroll !== undefined) {
         autoScrollToggle.checked = data.autoScroll;
+      }
+
+      // Thiết lập tốc độ cuộn
+      if (data.scrollSpeed) {
+        for (const option of speedOptions) {
+          if (option.value === data.scrollSpeed.toString()) {
+            option.checked = true;
+            break;
+          }
+        }
       }
     }
   );
@@ -66,6 +77,39 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     );
   });
+
+  // Xử lý khi thay đổi tốc độ cuộn
+  for (const option of speedOptions) {
+    option.addEventListener("change", function () {
+      if (this.checked) {
+        const speed = this.value;
+        console.log("Đã thay đổi tốc độ cuộn:", speed);
+
+        // Lưu tốc độ cuộn
+        chrome.storage.sync.set({ scrollSpeed: speed });
+
+        // Gửi thông báo đến các tab X.com đang mở
+        chrome.tabs.query(
+          { url: ["*://x.com/*", "*://twitter.com/*"] },
+          function (tabs) {
+            for (const tab of tabs) {
+              chrome.tabs.sendMessage(
+                tab.id,
+                { action: "setScrollSpeed", speed: parseInt(speed) },
+                function (response) {
+                  if (chrome.runtime.lastError) {
+                    console.log("Lỗi:", chrome.runtime.lastError.message);
+                  } else if (response) {
+                    console.log("Phản hồi:", response.status);
+                  }
+                }
+              );
+            }
+          }
+        );
+      }
+    });
+  }
 
   // Thêm một nút kiểm tra để xem extension có hoạt động không
   const testDiv = document.createElement("div");

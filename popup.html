@@ -76,6 +76,18 @@
     input:checked + .slider:before {
       transform: translateX(26px);
     }
+    .speed-selector {
+      margin: 10px 0;
+    }
+    .speed-options {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+    }
+    .speed-options label {
+      display: flex;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -87,6 +99,20 @@
       <input type="checkbox" id="autoScroll" checked>
       <span class="slider"></span>
     </label>
+  </div>
+  <div class="speed-selector">
+    <span>Tốc độ cuộn:</span>
+    <div class="speed-options">
+      <label>
+        <input type="radio" name="scrollSpeed" value="1" checked> Chậm
+      </label>
+      <label>
+        <input type="radio" name="scrollSpeed" value="2"> Trung bình
+      </label>
+      <label>
+        <input type="radio" name="scrollSpeed" value="3"> Nhanh
+      </label>
+    </div>
   </div>
   <button id="goToOptions">Cài đặt tài khoản</button>
   <div class="status" id="status">Chưa đăng nhập</div>
